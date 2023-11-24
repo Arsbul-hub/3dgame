@@ -82,7 +82,7 @@ class Player(DirectObject):
         pickerNode.addSolid(self.pickerRay)
         self.picker.addCollider(pickerNP, self.pq)
 
-        #self.picker.showCollisions(render)
+        # self.picker.showCollisions(render)
 
     def loadHitbox(self):
         self.pusher = CollisionHandlerPusher()
@@ -162,9 +162,8 @@ class Player(DirectObject):
         if self.can_move:
             self.h -= dx * 50
             self.p += dy * 50
-            #self.h = np.clip(self.h, -90, 90)
+            # self.h = np.clip(self.h, -90, 90)
             self.p = np.clip(self.p, -90, 90)
-
 
             camera.setHpr(self.h, self.p, 0)
 
