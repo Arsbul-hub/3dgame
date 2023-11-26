@@ -41,6 +41,8 @@ class Player(DirectObject):
     added_blocks = []
     removed_blocks = []
     can_move = True
+    inventory = []
+    current_inventory_item = 0
 
     def __init__(self, name, world, server_manager):
         super().__init__()
@@ -86,7 +88,7 @@ class Player(DirectObject):
 
     def loadHitbox(self):
         self.pusher = CollisionHandlerPusher()
-        cs = CollisionBox((0, 0, 0), 0.25, 0.25, 1)  # CollisionCapsule(0, 0, 0, 0, 0, 0.3, 0.25)
+        cs = CollisionBox((0, 0, .5), 0.25, 0.25, 1)  # CollisionCapsule(0, 0, 0, 0, 0, 0.3, 0.25)
         # cs.setCenter(0.7,0.7,0.7)
         self.player = render.attachNewNode(CollisionNode('player_hitbox'))
         self.player.node().addSolid(cs)
@@ -108,6 +110,17 @@ class Player(DirectObject):
 
         self.accept('mouse1', self.left_click)
         self.accept('mouse3', self.right_click)
+        self.accept('wheel_up', self.set_inventory_item, [1])
+
+        self.accept('wheel_down', self.set_inventory_item, [-1])
+
+    def set_inventory_item(self, step):
+        if self.inventory:
+            if self.current_inventory_item + step == len(self.inventory):
+                self.current_inventory_item = 0
+            elif self.current_inventory_item + step < 0:
+                self.current_inventory_item = len(self.inventory) - 1
+            print(self.inventory)
 
     def update_player(self, dt):
         # print(self.player.getPos())
@@ -124,7 +137,9 @@ class Player(DirectObject):
                 self.jump()
             if self.can_fall:
                 self.update_gravity(dt)
-
+            if self.world.player_entity:
+                self.inventory = self.world.player_entity["inventory"]
+        #print(self.inventory)
     def update_pos(self):
         player_pos = Vec3(self.player.getX(), self.player.getY(), self.player.getZ() - 1)
         out = self.server_manager.update_user(self.name, player_pos, self.player.getHpr())
@@ -180,24 +195,30 @@ class Player(DirectObject):
         else:
             if self.delta_z < self.max_acceleration:
                 self.delta_z += self.acceleration * dt
+        self.event_manager.sortEntries()
         entries = list(self.event_manager.entries)[1:]
         if entries:
+
             entry = min(entries, key=lambda a: abs(self.player.getZ() - a.getSurfacePoint(render).getZ()))
+
             z = entry.getSurfacePoint(render).getZ()
-            name = entry.getIntoNode().getName()
-            if name != "player_hitbox":
-                if self.player.getZ() - 1 > z:
-                    self.grounded = False
-                else:
-                    self.grounded = True
-            else:
+            # name = entry.getIntoNode().getName()
+            # print(name)
+
+            if self.player.getZ() - 1 > z:
+
                 self.grounded = False
+            else:
+
+                self.grounded = True
+        else:
+            self.grounded = False
 
         self.player.setZ(self.player.getZ() - self.delta_z)
 
     def left_click(self):
 
-        if base.mouseWatcherNode.hasMouse():
+        if base.mouseWatcherNode.hasMouse() and self.can_move:
             # get the mouse position
             mpos = base.mouseWatcherNode.getMouse()
 
@@ -226,7 +247,8 @@ class Player(DirectObject):
                     # pickedObj.remove_node()
                     if get_distance(pickedObj.getPos(), camera.getPos()) <= 5:
                         # block = self.world.removeBlock(pickedObj.getPos())
-                        thread.start_new_thread(lambda: self.server_manager.pop_block(pickedObj.getPos()), "")
+                        thread.start_new_thread(lambda: self.server_manager.pop_block(self.name, pickedObj.getPos()),
+                                                "")
 
                         # self.server_manager.pop_block(pickedObj.getPos())
 
@@ -243,7 +265,7 @@ class Player(DirectObject):
 
     def right_click(self):
 
-        if base.mouseWatcherNode.hasMouse():
+        if base.mouseWatcherNode.hasMouse() and self.can_move:
             # get the mouse position
             mpos = base.mouseWatcherNode.getMouse()
 
@@ -261,10 +283,12 @@ class Player(DirectObject):
                     normal = entry.getSurfaceNormal(render)
                     position = pickedObj.getPos() + normal
 
-                    if get_distance(position, camera.getPos()) <= 5:
+                    if get_distance(position, camera.getPos()) <= 5 and self.inventory:
                         # block = self.world.addBlock(position=position, block_type="stone")
                         # self.world.player_added_blocks.append(block)
-                        thread.start_new_thread(lambda: self.server_manager.set_block(position), "")
+
+                        thread.start_new_thread(lambda: self.server_manager.set_block(self.name, self.inventory[
+                            self.current_inventory_item]["item_type"], position), "")
                         # self.server_manager.set_block(position)
                         # self.world.player_added_blocks.append(block)
                         # self.world.update_world()

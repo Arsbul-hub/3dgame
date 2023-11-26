@@ -67,7 +67,7 @@ class MyApp(ShowBase):
         self.main_font = loader.loadFont('arial.ttf')
         # scene = MainScene()
         self.load_main_menu()
-        self.title = OnscreenText(text='Игра специально для Ивана Гагарина!', font=self.main_font, pos=(0, 0.5),
+        self.title = OnscreenText(text='3D Игра!', font=self.main_font, pos=(0, 0.5),
                                   scale=0.07)
 
         self.subtitle = OnscreenText(text='Ваш ник:', font=self.main_font, pos=(0, 0.2),
@@ -84,7 +84,11 @@ class MyApp(ShowBase):
                                            text2_font=self.main_font, pos=Vec3(0, -0.2), scale=.1,
                                            command=self.unpause_game)
         self.unpause_button.hide()
-
+        self.crosshair = OnscreenImage(image="./app/static/images/icons/crosshair.png",
+                             pos=(0, 0, 0),
+                             scale=0.02)
+        self.crosshair.setTransparency(TransparencyAttrib.MAlpha)
+        self.crosshair.hide()
         # self.load_main_screen()
         # server_manager.connect_user(name)
 
@@ -102,7 +106,7 @@ class MyApp(ShowBase):
         # thread.start_new_thread(self.thread_update, "")
         # # threading2.Thread(target=self.world.update_world).start()
         # self.setupGUI()
-        self.lockMouse()
+
 
         self.accept("escape", self.pause_game)
 
@@ -122,20 +126,26 @@ class MyApp(ShowBase):
         self.setupCamera()
         thread.start_new_thread(self.thread_update, "")
         self.taskMgr.add(self.update)
+        self.lockMouse()
         self.title.hide()
         self.subtitle.hide()
         self.player_name_text.hide()
         self.play_button.hide()
+        self.crosshair.show()
         self.game_started = True
 
     def pause_game(self):
         self.player.disable_move()
         self.unpause_button.show()
+        self.crosshair.hide()
+        self.unlockMouse()
         self.is_game_paused = True
 
     def unpause_game(self):
         self.player.enable_move()
         self.unpause_button.hide()
+        self.crosshair.show()
+        self.lockMouse()
         self.is_game_paused = False
 
     def set_name(self, sumb):
@@ -177,9 +187,9 @@ class MyApp(ShowBase):
         self.moveCameraWithMouse(dt)
         self.setupCamera()
         # print(self.player_name, self.world.current_entities)
-        if self.player_name in self.world.current_entities:
+        if self.world.player_entity:
 
-            self.health_text.text = f"Здоровье: {int(self.world.current_entities[self.player_name]['health'])}%"
+            self.health_text.text = f"Здоровье: {int(self.world.player_entity['health'])}%"
         else:
             self.health_text.text = "Здоровье: 0"
         # self.camera.lookAt(self.pcn1)
@@ -200,16 +210,11 @@ class MyApp(ShowBase):
             self.player.rotate_player(x * 3, y * 3)
             #self.lastMouseX, self.lastMouseY = x, y
 
-    def setupGUI(self):
-        icon = OnscreenImage(image="./app/static/images/icons/crosshair.png",
-                             pos=(0, 0, 0),
-                             scale=0.01)
-        icon.setTransparency(TransparencyAttrib.MAlpha)
 
     def lockMouse(self):
         self.cameraSwingActivated = False
         properties = WindowProperties()
-        properties.setCursorHidden(False)
+        properties.setCursorHidden(True)
 
         # properties.setMouseMode(WindowProperties.M_relative)
         self.win.requestProperties(properties)

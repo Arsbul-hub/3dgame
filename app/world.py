@@ -31,6 +31,7 @@ class World(DirectObject):
 
     player_added_blocks = []
     player_removed_blocks = []
+    player_entity = {}
 
     def __init__(self, player_name):
         super().__init__()
@@ -73,14 +74,12 @@ class World(DirectObject):
     def addEntity(self, position, name, scale, hpr, health, max_health):
         sx, sy, sz = scale
 
-
         block = loader.loadModel("models/box")
-        #collision = CollisionBox(Vec3(block.getX() + 0.5, block.getY() + 0.5, block.getZ() + 0.5), 0.5, 0.5, 0.5)
+        # collision = CollisionBox(Vec3(block.getX() + 0.5, block.getY() + 0.5, block.getZ() + 0.5), 0.5, 0.5, 0.5)
         block.reparentTo(render)
 
         block.setScale(scale)
         block.setName(f"{name}")
-
 
         block.setPos(position - Vec3(sx / 2, sy / 2, sz / 2))
         block.setTag("entity", name)
@@ -88,9 +87,9 @@ class World(DirectObject):
         # tex = loader.loadTexture(self.block_types.get(block_type, ""))
 
         # cnodePath.show()
-        #cnodePath = block.attachNewNode(CollisionNode(name))
+        # cnodePath = block.attachNewNode(CollisionNode(name))
 
-        #cnodePath.node().addSolid(collision)
+        # cnodePath.node().addSolid(collision)
         self.entities_nodes[name] = block
         # print(self.nodes[position])
         # self.d = 0
@@ -98,7 +97,7 @@ class World(DirectObject):
                   "name": name,
                   "hpr": [hpr[0], hpr[1], hpr[2]],
                   "health": health,
-                  "max_health": max_health
+                  "max_health": max_health,
                   }
         self.current_entities[name] = entity
 
@@ -113,8 +112,8 @@ class World(DirectObject):
             node.remove_node()
 
     def update_world(self):
-        #await task.pause(1)
-        #while True:
+        # await task.pause(1)
+        # while True:
         world = server_manager.get_world()
 
         to_set, to_remove = self.get_worlds_difference(world["world"])
@@ -122,18 +121,19 @@ class World(DirectObject):
         # print(to_set, to_remove)
         for block in to_set:
             x, y, z = block["pos"]
+
             self.addBlock(position=Vec3(float(x), float(y), float(z)), block_type=block["type"])
         for block in to_remove:
             x, y, z = block["pos"]
             self.removeBlock(Vec3(x, y, z))
         self.current_world = world["world"]
-
+        # print(world["entities"])
         to_set_entity, to_remove_entity = self.get_entities_difference(world["entities"])
         for entity in to_set_entity:
             x, y, z = entity["pos"]
             h, p, r = entity["hpr"]
             if entity["name"] != self.player_name:
-                #print(123)
+                # print(123)
                 x, y, z = entity["pos"]
                 h, p, r = entity["hpr"]
                 sx, sy, sz = entity["scale"]
@@ -145,21 +145,23 @@ class World(DirectObject):
                                health=entity["health"],
                                max_health=entity["max_health"])
             else:
+                # print(entity)
                 entity = {"pos": [x, y, z],
                           "name": entity["name"],
                           "hpr": [h, p, r],
                           "health": entity["health"],
-                          "max_health": entity["max_health"]
+                          "max_health": entity["max_health"],
+                          "inventory": entity["inventory"]
                           }
-                self.current_entities[entity["name"]] = entity
+                self.player_entity = entity
         for entity in to_remove_entity:
-             if entity["name"] != self.player_name:
+            if entity["name"] != self.player_name:
                 self.removeEntity(entity["name"])
         for name, entity in world["entities"].items():
             x, y, z = entity["pos"]
             h, p, r = entity["hpr"]
             sx, sy, sz = entity["scale"]
-            #print(sx, sy, sz)
+            # print(sx, sy, sz)
             if entity["name"] in self.current_entities:
 
                 self.current_entities[name]["pos"] = Vec3(float(x), float(y), float(z))
@@ -169,11 +171,11 @@ class World(DirectObject):
                     pos = Vec3(float(x), float(y), float(z)) - Vec3(float(sx) / 2, float(sy) / 2)
                     self.entities_nodes[name].setPos(pos)
 
-        #print(self.current_entities)
+        # print(self.current_entities)
 
         # d2 = time.time()
         # print(d2 - d1)
-        #return task.cont
+        # return task.cont
 
     def get_worlds_difference(self, world):
 
@@ -184,8 +186,11 @@ class World(DirectObject):
 
         func_to_json = np.vectorize(lambda a: json.loads(a))
 
-        world_new = np.array(list(map(lambda a: str(a).replace("\'", "\""), world)))
-        world_old = np.array(list(map(lambda a: str(a).replace("\'", "\""), self.current_world)))
+        world_new = np.array(
+            list(map(lambda a: str(a).replace("\'", "\""), world)))
+        world_old = np.array(list(
+            map(lambda a: str(a).replace("\'", "\""),
+                self.current_world)))
         set_blocks1 = np.setdiff1d(world_new, world_old)
         removed_blocks1 = np.setdiff1d(world_old, world_new)
         if set_blocks1.size:
@@ -208,7 +213,6 @@ class World(DirectObject):
         for name, entity in self.current_entities.items():
             if name not in entities.keys():
                 removed_entities.append(entity)
-
 
         # if removed_blocks1.size:
         #     removed_entities = func_to_json(removed_blocks1)
@@ -239,6 +243,7 @@ class World(DirectObject):
         #     if entity["name"] == name:
         #         entity_data = entity
         return self.current_entities.get(name), self.entities_nodes.get(name)
+
     def get_entity_by_pos(self, pos):
         node = None
         entity_data = None

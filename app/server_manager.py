@@ -70,22 +70,25 @@ class ServerManager:
             return True
         return False
 
-    def set_block(self, pos):
+    def set_block(self, player_name, item_name, pos):
         params = {
             "name": self.server_name,
             "x": pos[0],
             "y": pos[1],
-            "z": pos[2]
+            "z": pos[2],
+            "player_name": player_name,
+            "item_name": item_name
         }
 
         post(f"{self.config['host']}/set_block", params=params)
 
-    def pop_block(self, pos):
+    def pop_block(self, player_name, pos):
         params = {
             "name": self.server_name,
             "x": pos[0],
             "y": pos[1],
-            "z": pos[2]
+            "z": pos[2],
+            "player_name": player_name
         }
 
         post(f"{self.config['host']}/remove_block", params=params)
