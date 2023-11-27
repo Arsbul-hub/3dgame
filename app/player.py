@@ -120,7 +120,7 @@ class Player(DirectObject):
                 self.current_inventory_item = 0
             elif self.current_inventory_item + step < 0:
                 self.current_inventory_item = len(self.inventory) - 1
-            print(self.inventory)
+            #print(self.inventory)
 
     def update_player(self, dt):
         # print(self.player.getPos())

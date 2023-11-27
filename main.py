@@ -84,9 +84,17 @@ class MyApp(ShowBase):
                                            text2_font=self.main_font, pos=Vec3(0, -0.2), scale=.1,
                                            command=self.unpause_game)
         self.unpause_button.hide()
+        self.current_inventory_item = OnscreenImage(image="./app/static/images/textures/cobblestone.png",
+                                                    pos=(0, 0, -0.6),
+                                                    scale=0.1)
+        self.current_inventory_item.hide()
+        self.current_inventory_item_count = OnscreenText(text='', font=self.main_font,
+                                                         pos=(0, -0.8),
+                                                         scale=0.07)
+        self.current_inventory_item_count.hide()
         self.crosshair = OnscreenImage(image="./app/static/images/icons/crosshair.png",
-                             pos=(0, 0, 0),
-                             scale=0.02)
+                                       pos=(0, 0, 0),
+                                       scale=0.02)
         self.crosshair.setTransparency(TransparencyAttrib.MAlpha)
         self.crosshair.hide()
         # self.load_main_screen()
@@ -106,7 +114,6 @@ class MyApp(ShowBase):
         # thread.start_new_thread(self.thread_update, "")
         # # threading2.Thread(target=self.world.update_world).start()
         # self.setupGUI()
-
 
         self.accept("escape", self.pause_game)
 
@@ -130,14 +137,19 @@ class MyApp(ShowBase):
         self.title.hide()
         self.subtitle.hide()
         self.player_name_text.hide()
+        self.current_inventory_item.show()
+        self.current_inventory_item_count.show()
         self.play_button.hide()
         self.crosshair.show()
+
         self.game_started = True
 
     def pause_game(self):
         self.player.disable_move()
         self.unpause_button.show()
         self.crosshair.hide()
+        self.current_inventory_item.hide()
+        self.current_inventory_item_count.hide()
         self.unlockMouse()
         self.is_game_paused = True
 
@@ -145,6 +157,8 @@ class MyApp(ShowBase):
         self.player.enable_move()
         self.unpause_button.hide()
         self.crosshair.show()
+        self.current_inventory_item.show()
+        self.current_inventory_item_count.show()
         self.lockMouse()
         self.is_game_paused = False
 
@@ -187,6 +201,11 @@ class MyApp(ShowBase):
         self.moveCameraWithMouse(dt)
         self.setupCamera()
         # print(self.player_name, self.world.current_entities)
+        if self.player.inventory:
+            inventory_item = self.player.inventory[self.player.current_inventory_item]
+
+            self.current_inventory_item.setImage(f"./app/static/images/textures/{inventory_item['item_type']}.png")
+            self.current_inventory_item_count.setText(str(inventory_item["count"]))
         if self.world.player_entity:
 
             self.health_text.text = f"Здоровье: {int(self.world.player_entity['health'])}%"
@@ -208,8 +227,7 @@ class MyApp(ShowBase):
             x, y = mw.getMouseX(), mw.getMouseY()
 
             self.player.rotate_player(x * 3, y * 3)
-            #self.lastMouseX, self.lastMouseY = x, y
-
+            # self.lastMouseX, self.lastMouseY = x, y
 
     def lockMouse(self):
         self.cameraSwingActivated = False

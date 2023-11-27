@@ -37,7 +37,7 @@ class World(DirectObject):
         super().__init__()
         self.player_name = player_name
 
-    def addBlock(self, position, block_type):
+    def addBlock(self, position, block_type, broke_index, max_broke_index):
         def on_loads(block):
             collision = CollisionBox(Vec3(block.getX() + 0.5, block.getY() + 0.5, block.getZ() + 0.5), 0.5, 0.5, 0.5)
             block.reparentTo(render)
@@ -46,9 +46,18 @@ class World(DirectObject):
             block.setScale(1, 1, 1)
             block.setPos(position)
 
-            tex = loader.loadTexture(f"./app/static/images/textures/{block_type}.png")
-            block.setTexture(tex, 1)
-
+            main_texture = loader.loadTexture(f"./app/static/images/textures/{block_type}.png")
+            main_layer = TextureStage('main_texture')
+            #main_layer.setMode(TextureStage.MDecal1
+            block.setTexture(main_texture, 1)
+            # ts.setColor((1, 0, 0, 1))
+            #print(broke_index,  max_broke_index)
+            if broke_index < max_broke_index:
+                #print(123)
+                broke_texture = loader.loadTexture(f"./app/static/images/textures/broke_texture.png")
+                second_layer = TextureStage('broke_texture')
+                second_layer.setMode(TextureStage.MDecal)
+                block.setTexture(second_layer, broke_texture)
             cnodePath = block.attachNewNode(CollisionNode(block_type))
 
             cnodePath.node().addSolid(collision)
@@ -122,7 +131,10 @@ class World(DirectObject):
         for block in to_set:
             x, y, z = block["pos"]
 
-            self.addBlock(position=Vec3(float(x), float(y), float(z)), block_type=block["type"])
+            self.addBlock(position=Vec3(float(x), float(y), float(z)),
+                          block_type=block["type"],
+                          broke_index=block["broke"],
+                          max_broke_index=block["broke_index"])
         for block in to_remove:
             x, y, z = block["pos"]
             self.removeBlock(Vec3(x, y, z))
