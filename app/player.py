@@ -9,7 +9,8 @@ from direct.showbase.DirectObject import DirectObject
 from panda3d.core import CollisionNode
 from panda3d.core import *
 
-from app import server_manager
+from app import server_manager, sound_manager
+from app.animate import Animation
 
 
 def degToRad(degrees):
@@ -43,6 +44,7 @@ class Player(DirectObject):
     can_move = True
     inventory = []
     current_inventory_item = 0
+    old_pos = Vec3()
 
     def __init__(self, name, world, server_manager):
         super().__init__()
@@ -58,6 +60,7 @@ class Player(DirectObject):
         self.setupGroundRay()
         self.setupPlayer()
         self.can_fall = False
+        self.camera_animation = Animation(sin)
 
     def disable_move(self):
         self.can_move = False
@@ -115,18 +118,26 @@ class Player(DirectObject):
         self.accept('wheel_down', self.set_inventory_item, [-1])
 
     def set_inventory_item(self, step):
+
         if self.inventory:
-            if self.current_inventory_item + step == len(self.inventory):
-                self.current_inventory_item = 0
-            elif self.current_inventory_item + step < 0:
-                self.current_inventory_item = len(self.inventory) - 1
-            #print(self.inventory)
+            if len(self.inventory) > self.current_inventory_item + step >= 0:
+                self.current_inventory_item += step
+        # if self.current_inventory_item + step == len(self.inventory):
+        #     self.current_inventory_item = 0
+        # elif self.current_inventory_item + step < 0:
+        #     self.current_inventory_item = len(self.inventory) - 1
+        # print(self.inventory)
 
     def update_player(self, dt):
         # print(self.player.getPos())
         if self.can_move:
+            self.move_camera()
             if self.keys.get("forward"):
+                if self.grounded:
+                    self.camera_animation.animate(10, dt)
+                    sound_manager.play_walk()
                 self.move_player(dt, "forward")
+
             if self.keys.get("backward"):
                 self.move_player(dt, "backward")
             if self.keys.get("right"):
@@ -139,7 +150,13 @@ class Player(DirectObject):
                 self.update_gravity(dt)
             if self.world.player_entity:
                 self.inventory = self.world.player_entity["inventory"]
-        #print(self.inventory)
+
+        # print(self.inventory)
+
+    def move_camera(self):
+        cam_pos = self.player.getPos() + Vec3(0, 0, + .5 + abs(self.camera_animation.get_animation()) / 6)
+        camera.setPos(cam_pos)
+
     def update_pos(self):
         player_pos = Vec3(self.player.getX(), self.player.getY(), self.player.getZ() - 1)
         out = self.server_manager.update_user(self.name, player_pos, self.player.getHpr())
@@ -153,10 +170,11 @@ class Player(DirectObject):
     def move_player(self, dt, direction):
         x_movement = 0
         y_movement = 0
-        z_movement = 0
+
         if direction == "forward":
             x_movement -= dt * self.playerMoveSpeed * sin(degToRad(self.h))
             y_movement += dt * self.playerMoveSpeed * cos(degToRad(self.h))
+
             # z_movement += dt * self.playerMoveSpeed * sin(degToRad(self.p))
         if direction == "backward":
             x_movement += dt * self.playerMoveSpeed * sin(degToRad(self.h))
@@ -170,8 +188,11 @@ class Player(DirectObject):
             x_movement -= dt * self.playerMoveSpeed * cos(degToRad(self.h))
             y_movement -= dt * self.playerMoveSpeed * sin(degToRad(self.h))
             # z_movement += dt * playerMoveSpeed * sin(degToRad(self.p))
-        self.player.setPos(self.player.getX() + x_movement, self.player.getY() + y_movement,
-                           self.player.getZ() + z_movement)
+        new_pos = Vec3(self.player.getX() + x_movement, self.player.getY() + y_movement, self.player.getZ())
+
+        self.player.setPos(new_pos)
+
+        self.old_pos = new_pos
 
     def rotate_player(self, dx, dy):
         if self.can_move:
@@ -199,18 +220,20 @@ class Player(DirectObject):
         entries = list(self.event_manager.entries)[1:]
         if entries:
 
-            entry = min(entries, key=lambda a: abs(self.player.getZ() - a.getSurfacePoint(render).getZ()))
-
-            z = entry.getSurfacePoint(render).getZ()
+            # entry = min(entries, key=lambda a: abs(self.player.getZ() - a.getSurfacePoint(render).getZ()))
+            # entry =
+            # .getEntry(0).getIntoNodePath()
+            z = entries[0].getSurfacePoint(render).getZ()
             # name = entry.getIntoNode().getName()
             # print(name)
 
-            if self.player.getZ() - 1 > z:
+            if self.player.getZ() - self.delta_z - 1 < z:
+                self.grounded = True
 
-                self.grounded = False
+
             else:
 
-                self.grounded = True
+                self.grounded = False
         else:
             self.grounded = False
 
@@ -218,17 +241,22 @@ class Player(DirectObject):
 
     def left_click(self):
 
-        if base.mouseWatcherNode.hasMouse() and self.can_move:
+        if base.mouseWatcherNode.hasMouse() and self.can_move and self.inventory:
             # get the mouse position
             mpos = base.mouseWatcherNode.getMouse()
 
             # set the position of the ray based on the mouse position
             self.pickerRay.setFromLens(base.camNode, mpos.getX(), mpos.getY())
             self.picker.traverse(render)
+            current_item = self.inventory[self.current_inventory_item]
+            if current_item["type"] == "gun":
+                sound_manager.play_gun()
+
             if list(self.pq.entries):
                 # entry = min(list(self.pq.entries),
                 #             key=lambda a: get_distance(a.getIntoNodePath().findNetTag('block').getPos(), camera.getPos()))
                 # #entry = self.pq.entries[0]
+
                 self.pq.sortEntries()
                 pickedObj = self.pq.getEntry(0).getIntoNodePath()
 
@@ -237,22 +265,24 @@ class Player(DirectObject):
                 if not pickedObj.findNetTag('entity').isEmpty():
                     pickedObj = pickedObj.findNetTag('entity')
                     entity = self.world.get_entity(pickedObj.name)[0]
-                    if entity is not None:
+                    if entity is not None and current_item["type"] == "gun":
                         self.server_manager.hit_player(entity["name"])
+
                 else:
                     pass
                     pickedObj = pickedObj.findNetTag('block')
                     # print(pickedObj.getPos())
                     # pickedObj.setColor(255, 0, 0, 255)
                     # pickedObj.remove_node()
-                    if get_distance(pickedObj.getPos(), camera.getPos()) <= 5:
-                        # block = self.world.removeBlock(pickedObj.getPos())
+
+                    if get_distance(pickedObj.getPos(), camera.getPos()) <= 5 and current_item["type"] == "tool":
+                        #block = self.world.removeBlock(pickedObj.getPos())
                         thread.start_new_thread(lambda: self.server_manager.pop_block(self.name, pickedObj.getPos()),
                                                 "")
-
+                        sound_manager.play_broke()
                         # self.server_manager.pop_block(pickedObj.getPos())
 
-                        # self.world.player_removed_blocks.append(block)
+                        #self.world.player_removed_blocks.append(block)
                     # self.world.update_world()
                     # self.world.removeBlock(pickedObj.getPos())
             # if self.pq.getNumEntries() > 0:
@@ -279,18 +309,20 @@ class Player(DirectObject):
                             key=lambda a: get_distance(a.getSurfacePoint(render), camera.getPos()))
                 self.pq.sortEntries()
                 pickedObj = entry.getIntoNodePath().findNetTag('block')
-                if not pickedObj.isEmpty():
+                if not pickedObj.isEmpty() and self.inventory:
                     normal = entry.getSurfaceNormal(render)
                     position = pickedObj.getPos() + normal
-
-                    if get_distance(position, camera.getPos()) <= 5 and self.inventory:
-                        # block = self.world.addBlock(position=position, block_type="stone")
+                    current_item = self.inventory[self.current_inventory_item]
+                    if get_distance(position, camera.getPos()) <= 5:
+                        if current_item["type"] == "block" and current_item["count"] > 0:
+                        #block = self.world.addBlock(position, block_name=current_item["name"])
                         # self.world.player_added_blocks.append(block)
-
-                        thread.start_new_thread(lambda: self.server_manager.set_block(self.name, self.inventory[
-                            self.current_inventory_item]["item_type"], position), "")
+                        #self.world.player_added_blocks.append(block)
+                            thread.start_new_thread(lambda: self.server_manager.set_block(self.name, self.inventory[
+                                self.current_inventory_item]["name"], position), "")
+                            sound_manager.play_broke()
                         # self.server_manager.set_block(position)
-                        # self.world.player_added_blocks.append(block)
+
                         # self.world.update_world()
 
     def swich_key(self, key, n):

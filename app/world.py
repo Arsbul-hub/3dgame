@@ -22,6 +22,13 @@ def get_distance(pos1, pos2):
     return (dx ** 2 + dy ** 2 + dz ** 2) ** .5
 
 
+blocks = {
+    "cobblestone": {"name": "cobblestone", "broke_index": 1, "breakable": 1},
+    "boxes": {"name": "boxes", "broke_index": 0, "breakable": 1},
+    "bedrock": {"name": "bedrock", "broke_index": 0, "breakable": 0}
+}
+
+
 class World(DirectObject):
     current_world = []
 
@@ -37,28 +44,29 @@ class World(DirectObject):
         super().__init__()
         self.player_name = player_name
 
-    def addBlock(self, position, block_type, broke_index, max_broke_index):
+    def addBlock(self, position, block_name, broke_index=None):
         def on_loads(block):
+            block_data = blocks[block_name]
             collision = CollisionBox(Vec3(block.getX() + 0.5, block.getY() + 0.5, block.getZ() + 0.5), 0.5, 0.5, 0.5)
             block.reparentTo(render)
-            block.setName(block_type)
+            block.setName(block_name)
             block.setTag("block", "1")
             block.setScale(1, 1, 1)
             block.setPos(position)
 
-            main_texture = loader.loadTexture(f"./app/static/images/textures/{block_type}.png")
+            main_texture = loader.loadTexture(f"./app/static/images/textures/{block_name}.png")
             main_layer = TextureStage('main_texture')
-            #main_layer.setMode(TextureStage.MDecal1
+            # main_layer.setMode(TextureStage.MDecal1
             block.setTexture(main_texture, 1)
             # ts.setColor((1, 0, 0, 1))
-            #print(broke_index,  max_broke_index)
-            if broke_index < max_broke_index:
-                #print(123)
+            # print(broke_index,  max_broke_index)
+            if broke_index and broke_index < block_data["broke_index"]:
+                # print(123)
                 broke_texture = loader.loadTexture(f"./app/static/images/textures/broke_texture.png")
                 second_layer = TextureStage('broke_texture')
                 second_layer.setMode(TextureStage.MDecal)
                 block.setTexture(second_layer, broke_texture)
-            cnodePath = block.attachNewNode(CollisionNode(block_type))
+            cnodePath = block.attachNewNode(CollisionNode(block_name))
 
             cnodePath.node().addSolid(collision)
             # cnodePath.show()
@@ -69,9 +77,9 @@ class World(DirectObject):
 
         # print(self.nodes[position])
         # self.d = 0
-        self.current_world.append({"pos": [position.x, position.y, position.z], "block_type": block_type})
+        self.current_world.append({"pos": [position.x, position.y, position.z], "block_type": block_name})
 
-        return {"pos": [position.x, position.y, position.z], "block_type": block_type}
+        return {"pos": [position.x, position.y, position.z], "block_type": block_name}
 
     def removeBlock(self, pos):
         block_data, node = self.get_block(pos)
@@ -124,7 +132,8 @@ class World(DirectObject):
         # await task.pause(1)
         # while True:
         world = server_manager.get_world()
-
+        if not world:
+            return
         to_set, to_remove = self.get_worlds_difference(world["world"])
 
         # print(to_set, to_remove)
@@ -132,9 +141,8 @@ class World(DirectObject):
             x, y, z = block["pos"]
 
             self.addBlock(position=Vec3(float(x), float(y), float(z)),
-                          block_type=block["type"],
-                          broke_index=block["broke"],
-                          max_broke_index=block["broke_index"])
+                          block_name=block["name"],
+                          broke_index=block["broke"])
         for block in to_remove:
             x, y, z = block["pos"]
             self.removeBlock(Vec3(x, y, z))

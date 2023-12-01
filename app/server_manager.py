@@ -3,6 +3,7 @@ import random
 from requests import get, post
 
 from test_map import mas
+from requests.exceptions import ConnectionError
 
 
 class ServerManager:
@@ -16,17 +17,23 @@ class ServerManager:
             "name": self.server_name,
             # "player_name": player_name
         }
-        return get(f"{self.config['host']}/get_world", params=params).json()["world"]
+        try:
+            return get(f"{self.config['host']}/get_world", params=params).json()["world"]
+        except ConnectionError:
+            return False
 
     def connect_user(self, player_name):
         params = {
             "name": self.server_name,
             "player_name": player_name
         }
-        out = post(f"{self.config['host']}/connect_user", params=params).json()
-        if out["status"] == "ok":
-            return True
-        return False
+        try:
+            out = post(f"{self.config['host']}/connect_user", params=params).json()
+            if out["status"] == "ok":
+                return True
+            return False
+        except ConnectionError:
+            return False
 
     def update_user(self, player_name, pos, hpr):
         params = {
@@ -39,36 +46,48 @@ class ServerManager:
             "p": hpr.y,
             "r": hpr.z,
         }
-        out = get(f"{self.config['host']}/update_user", params=params).json()
-        if out["status"] == "no health":
-            return True
-        return False
+        try:
+            out = get(f"{self.config['host']}/update_user", params=params).json()
+            if out["status"] == "no health":
+                return True
+            return False
+        except ConnectionError:
+            return False
 
     def respawn_user(self, player_name):
         params = {
             "name": self.server_name,
             "player_name": player_name,
         }
-        out = get(f"{self.config['host']}/respawn_user", params=params).json()
-        if out["status"] == "ok":
-            return out["x"], out["y"], out["z"]
+        try:
+            out = get(f"{self.config['host']}/respawn_user", params=params).json()
+            if out["status"] == "ok":
+                return out["x"], out["y"], out["z"]
+        except ConnectionError:
+            return False
 
     def hit_player(self, player_name):
         params = {
             "name": self.server_name,
             "player_name": player_name,
         }
-        post(f"{self.config['host']}/hit_user", params=params)
+        try:
+            post(f"{self.config['host']}/hit_user", params=params)
+        except ConnectionError:
+            return False
 
     def disconnect_user(self, player_name):
         params = {
             "name": self.server_name,
             "player_name": player_name
         }
-        out = post(f"{self.config['host']}/disconnect_user", params=params).json()
-        if out["status"] == "ok":
-            return True
-        return False
+        try:
+            out = post(f"{self.config['host']}/disconnect_user", params=params).json()
+            if out["status"] == "ok":
+                return True
+            return False
+        except ConnectionError:
+            return False
 
     def set_block(self, player_name, item_name, pos):
         params = {
@@ -79,8 +98,10 @@ class ServerManager:
             "player_name": player_name,
             "item_name": item_name
         }
-
-        post(f"{self.config['host']}/set_block", params=params)
+        try:
+            post(f"{self.config['host']}/set_block", params=params)
+        except ConnectionError:
+            return False
 
     def pop_block(self, player_name, pos):
         params = {
@@ -90,8 +111,10 @@ class ServerManager:
             "z": pos[2],
             "player_name": player_name
         }
-
-        post(f"{self.config['host']}/remove_block", params=params)
+        try:
+            post(f"{self.config['host']}/remove_block", params=params)
+        except ConnectionError:
+            return False
 
     def create_server(self):
         r = random.randint(0, 10000)
@@ -104,4 +127,7 @@ class ServerManager:
 
         # 28 code
         # for i in range(60):
-        return get(f"{self.config['host']}/create_server", params=params).json()
+        try:
+            return get(f"{self.config['host']}/create_server", params=params).json()
+        except ConnectionError:
+            return

@@ -29,7 +29,7 @@ loadPrcFileData('', 'threading-model App/Cull/Draw')
 loadPrcFileData('', "sync-video true")
 # from panda3d.core import Thread
 # print(Thread.isThreadingSupported())
-from app import server_manager, player, collision_manager, ServerManager
+from app import server_manager, player, collision_manager, ServerManager, sound_manager
 from direct.stdpy import threading, thread
 # ALSO RIGHT:
 from direct.stdpy import threading2
@@ -64,6 +64,7 @@ class MyApp(ShowBase):
         self.player_name = ""
         base.cTrav = CollisionTraverser()
         self.scene_manager = SceneManager()
+        sound_manager.prepare_sounds(self)
         self.main_font = loader.loadFont('arial.ttf')
         # scene = MainScene()
         self.load_main_menu()
@@ -87,6 +88,7 @@ class MyApp(ShowBase):
         self.current_inventory_item = OnscreenImage(image="./app/static/images/textures/cobblestone.png",
                                                     pos=(0, 0, -0.6),
                                                     scale=0.1)
+        self.current_inventory_item.setTransparency(TransparencyAttrib.MAlpha)
         self.current_inventory_item.hide()
         self.current_inventory_item_count = OnscreenText(text='', font=self.main_font,
                                                          pos=(0, -0.8),
@@ -127,22 +129,23 @@ class MyApp(ShowBase):
     def load_game(self):
 
         self.world = World(self.player_name)
-        server_manager.connect_user(self.player_name)
-        self.player = Player(self.player_name, self.world, server_manager)
+        is_connected = server_manager.connect_user(self.player_name)
+        if is_connected:
+            self.player = Player(self.player_name, self.world, server_manager)
 
-        self.setupCamera()
-        thread.start_new_thread(self.thread_update, "")
-        self.taskMgr.add(self.update)
-        self.lockMouse()
-        self.title.hide()
-        self.subtitle.hide()
-        self.player_name_text.hide()
-        self.current_inventory_item.show()
-        self.current_inventory_item_count.show()
-        self.play_button.hide()
-        self.crosshair.show()
+            self.setupCamera()
+            thread.start_new_thread(self.thread_update, "")
+            self.taskMgr.add(self.update)
+            self.lockMouse()
+            self.title.hide()
+            self.subtitle.hide()
+            self.player_name_text.hide()
+            self.current_inventory_item.hide()
+            self.current_inventory_item_count.show()
+            self.play_button.hide()
+            self.crosshair.show()
 
-        self.game_started = True
+            self.game_started = True
 
     def pause_game(self):
         self.player.disable_move()
@@ -195,16 +198,16 @@ class MyApp(ShowBase):
 
     def update(self, task):
         dt = globalClock.getDt()
-        self.camera.setPos(self.player.player.getX(), self.player.player.getY(), self.player.player.getZ() + 0.5)
+        #self.camera.setPos(self.player.player.getX(), self.player.player.getY(), self.player.player.getZ() + 0.5)
         self.player.update_player(dt)
 
         self.moveCameraWithMouse(dt)
         self.setupCamera()
         # print(self.player_name, self.world.current_entities)
-        if self.player.inventory:
+        if self.player.inventory and not self.is_game_paused:
             inventory_item = self.player.inventory[self.player.current_inventory_item]
 
-            self.current_inventory_item.setImage(f"./app/static/images/textures/{inventory_item['item_type']}.png")
+            self.current_inventory_item.setImage(f"./app/static/images/textures/{inventory_item['name']}.png")
             self.current_inventory_item_count.setText(str(inventory_item["count"]))
         if self.world.player_entity:
 
