@@ -7,7 +7,7 @@ import numpy as np
 from direct.gui.DirectLabel import DirectLabel
 from direct.showbase.DirectObject import DirectObject
 from direct.showbase.ShowBaseGlobal import aspect2d
-from numba import jit, njit
+
 from panda3d.core import *
 
 from app import server_manager
@@ -22,12 +22,12 @@ def get_distance(pos1, pos2):
     return (dx ** 2 + dy ** 2 + dz ** 2) ** .5
 
 
-blocks = {
-    "cobblestone": {"name": "cobblestone", "broke_index": 1, "breakable": 1},
-    "boxes": {"name": "boxes", "broke_index": 0, "breakable": 1},
-    "bedrock": {"name": "bedrock", "broke_index": 0, "breakable": 0}
-}
 
+blocks = {
+    "cobblestone": {"name": "cobblestone", "broke_index": 2, "breakable": 1},
+    "boxes": {"name": "boxes", "broke_index": 1, "breakable": 1},
+    "bedrock": {"name": "bedrock", "broke_index": 1, "breakable": 0}
+}
 
 class World(DirectObject):
     current_world = []
@@ -93,18 +93,21 @@ class World(DirectObject):
 
     def remove_block(self, pos):
         block_data, node = self.get_block(pos)
-        if block_data and node:
-            if block_data["broke"] > 0:
+
+        if block_data and node and block_data["breakable"]:
+
+            if block_data["broke"] - 1 > 0:
                 broke_texture = loader.loadTexture(f"./app/static/images/textures/broke_texture.png")
                 second_layer = TextureStage('broke_texture')
                 second_layer.setMode(TextureStage.MDecal)
                 node.setTexture(second_layer, broke_texture)
                 block_data["broke"] -= 1
+
             else:
                 self.blocks_nodes.remove(node)
                 self.current_world.remove(block_data)
                 node.remove_node()
-
+        return block_data
 
     def addEntity(self, position, name, scale, hpr, health, max_health):
         sx, sy, sz = scale
@@ -218,7 +221,7 @@ class World(DirectObject):
 
             # else:
 
-        self.player_added_blocks.clear()
+        #self.player_added_blocks.clear()
         for block in to_set:
 
             if block not in self.player_removed_blocks:
@@ -234,7 +237,7 @@ class World(DirectObject):
                 # self.current_world = world["world"]
             # else:
             #     self.player_removed_blocks.remove(block)
-        self.player_removed_blocks.clear()
+        #self.player_removed_blocks.clear()
 
 
         #self.current_world = world

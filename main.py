@@ -1,9 +1,15 @@
 import json
+import os
 import random
 import sys
 # import threading
 
 from math import *
+
+try:
+    os.chdir(sys._MEIPASS)  # картинка не загружается даже с add-data
+except AttributeError:
+    print("Запуск из исходника")
 
 from direct.gui.DirectButton import DirectButton
 from direct.gui.OnscreenImage import OnscreenImage
@@ -22,11 +28,11 @@ from requests import get
 from app.scene_manager import SceneManager
 from app.world import World
 from app.player import Player
-
 loadPrcFileData('', 'win-size 1224 768')
 loadPrcFileData('', 'show-frame-rate-meter true')
 loadPrcFileData('', 'threading-model App/Cull/Draw')
 loadPrcFileData('', "sync-video true")
+
 # from panda3d.core import Thread
 # print(Thread.isThreadingSupported())
 from app import server_manager, player, collision_manager, ServerManager, sound_manager
@@ -37,7 +43,7 @@ from direct.gui.OnscreenText import OnscreenText
 
 # r = random.randint(0, 10000)
 r = 130
-
+# python3 -m pyinstaller --noconfirm --onedir --windowed --add-data "/home/arsbul/Рабочий стол/3dgame:3dgame/" --add-data "/home/arsbul/Рабочий стол/3dgame/arial.ttf:." --add-data "/home/arsbul/Рабочий стол/3dgame/config.json:."  "/home/arsbul/Рабочий стол/3dgame/main.py"
 
 # print(r)
 # name = "Arsbul"
@@ -137,7 +143,7 @@ class MyApp(ShowBase):
             thread.start_new_thread(self.update_world, "")
             thread.start_new_thread(self.update_player, "")
             thread.start_new_thread(self.update_entities, "")
-            #thread.start_new_thread(self.update_player, "")
+            # thread.start_new_thread(self.update_player, "")
             self.taskMgr.add(self.update)
             self.lockMouse()
             self.title.hide()
@@ -185,10 +191,10 @@ class MyApp(ShowBase):
             self.world.update_world()
             if not self.player.can_fall:
                 self.player.can_fall = True
+
     def update_entities(self):
         while True:
             self.world.update_entities()
-
 
     def update_player(self):
         while True:

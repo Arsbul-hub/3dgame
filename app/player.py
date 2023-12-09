@@ -291,8 +291,9 @@ class Player(DirectObject):
                                                 "")
                         sound_manager.play_broke()
                         # self.server_manager.pop_block(pickedObj.getPos())
+                        if block["broke"] <= 0:
+                            self.world.player_removed_blocks.append(block)
 
-                        self.world.player_removed_blocks.append(block)
                     # self.world.update_world()
                     # self.world.removeBlock(pickedObj.getPos())
             # if self.pq.getNumEntries() > 0:
