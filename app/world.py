@@ -45,22 +45,24 @@ class World(DirectObject):
         self.player_name = player_name
 
     def addBlock(self, position, block_name, broke_index=None):
+        block_data = blocks[block_name]
+        x, y, z = position
         def on_loads(block):
-            block_data = blocks[block_name]
             collision = CollisionBox(Vec3(block.getX() + 0.5, block.getY() + 0.5, block.getZ() + 0.5), 0.5, 0.5, 0.5)
             block.reparentTo(render)
             block.setName(block_name)
             block.setTag("block", "1")
             block.setScale(1, 1, 1)
-            block.setPos(position)
+            block.setPos(x, y, z)
 
             main_texture = loader.loadTexture(f"./app/static/images/textures/{block_name}.png")
-            main_layer = TextureStage('main_texture')
+            #main_layer = TextureStage('main_texture')
             # main_layer.setMode(TextureStage.MDecal1
             block.setTexture(main_texture, 1)
             # ts.setColor((1, 0, 0, 1))
             # print(broke_index,  max_broke_index)
-            if broke_index and broke_index < block_data["broke_index"]:
+            # print(broke_index, block_data["broke_index"])
+            if broke_index is not None and broke_index < block_data["broke_index"]:
                 # print(123)
                 broke_texture = loader.loadTexture(f"./app/static/images/textures/broke_texture.png")
                 second_layer = TextureStage('broke_texture')
@@ -77,16 +79,32 @@ class World(DirectObject):
 
         # print(self.nodes[position])
         # self.d = 0
-        self.current_world.append({"pos": [position.x, position.y, position.z], "block_type": block_name})
 
-        return {"pos": [position.x, position.y, position.z], "block_type": block_name}
+        new_block_data = {'breakable': block_data["breakable"], 'broke': broke_index,
+                          'broke_index': block_data["broke_index"], 'name': block_name,
+                          'pos': [x, y, z]}
 
-    def removeBlock(self, pos):
+        if broke_index is None:
+            new_block_data['broke'] = block_data["broke_index"]
+
+        self.current_world.append(new_block_data)
+
+        return new_block_data
+
+    def remove_block(self, pos):
         block_data, node = self.get_block(pos)
         if block_data and node:
-            self.blocks_nodes.remove(node)
-            self.current_world.remove(block_data)
-            node.remove_node()
+            if block_data["broke"] > 0:
+                broke_texture = loader.loadTexture(f"./app/static/images/textures/broke_texture.png")
+                second_layer = TextureStage('broke_texture')
+                second_layer.setMode(TextureStage.MDecal)
+                node.setTexture(second_layer, broke_texture)
+                block_data["broke"] -= 1
+            else:
+                self.blocks_nodes.remove(node)
+                self.current_world.remove(block_data)
+                node.remove_node()
+
 
     def addEntity(self, position, name, scale, hpr, health, max_health):
         sx, sy, sz = scale
@@ -128,28 +146,13 @@ class World(DirectObject):
             self.current_entities.pop(name)
             node.remove_node()
 
-    def update_world(self):
-        # await task.pause(1)
-        # while True:
-        world = server_manager.get_world()
-        if not world:
-            return
-        to_set, to_remove = self.get_worlds_difference(world["world"])
+    def update_entities(self):
+        #old_time = time.time()
+        entities = server_manager.get_entities()
+        to_set_entity, to_remove_entity = self.get_entities_difference(entities)
 
-        # print(to_set, to_remove)
-        for block in to_set:
-            x, y, z = block["pos"]
-
-            self.addBlock(position=Vec3(float(x), float(y), float(z)),
-                          block_name=block["name"],
-                          broke_index=block["broke"])
-        for block in to_remove:
-            x, y, z = block["pos"]
-            self.removeBlock(Vec3(x, y, z))
-        self.current_world = world["world"]
-        # print(world["entities"])
-        to_set_entity, to_remove_entity = self.get_entities_difference(world["entities"])
         for entity in to_set_entity:
+
             x, y, z = entity["pos"]
             h, p, r = entity["hpr"]
             if entity["name"] != self.player_name:
@@ -177,7 +180,7 @@ class World(DirectObject):
         for entity in to_remove_entity:
             if entity["name"] != self.player_name:
                 self.removeEntity(entity["name"])
-        for name, entity in world["entities"].items():
+        for name, entity in entities.items():
             x, y, z = entity["pos"]
             h, p, r = entity["hpr"]
             sx, sy, sz = entity["scale"]
@@ -190,7 +193,56 @@ class World(DirectObject):
                 if name in self.entities_nodes:
                     pos = Vec3(float(x), float(y), float(z)) - Vec3(float(sx) / 2, float(sy) / 2)
                     self.entities_nodes[name].setPos(pos)
+        #new_time = time.time()
+        #print(round(new_time - old_time, 2))
 
+    def update_world(self):
+        # await task.pause(1)
+        # while True:
+        #old_time = time.time()
+        world = server_manager.get_world()
+        #print(world)
+        #print(world)
+        if not world:
+            return
+        to_set, to_remove = self.get_worlds_difference(world)
+
+
+
+        for block in to_remove:
+
+            if block not in self.player_added_blocks:
+                x, y, z = block["pos"]
+
+                self.remove_block(Vec3(x, y, z))
+
+            # else:
+
+        self.player_added_blocks.clear()
+        for block in to_set:
+
+            if block not in self.player_removed_blocks:
+                x, y, z = block["pos"]
+                # print(block["broke"])
+
+                d = self.addBlock(position=(x, y, z),
+                              block_name=block["name"],
+                              broke_index=block["broke"])
+
+
+
+                # self.current_world = world["world"]
+            # else:
+            #     self.player_removed_blocks.remove(block)
+        self.player_removed_blocks.clear()
+
+
+        #self.current_world = world
+
+        # print(world["entities"])
+
+       # new_time = time.time()
+        #print(round(new_time - old_time, 2))
         # print(self.current_entities)
 
         # d2 = time.time()
@@ -202,15 +254,13 @@ class World(DirectObject):
         set_blocks = np.array([])
         removed_blocks = np.array([])
 
-        d1 = time.time()
+
 
         func_to_json = np.vectorize(lambda a: json.loads(a))
 
-        world_new = np.array(
-            list(map(lambda a: str(a).replace("\'", "\""), world)))
-        world_old = np.array(list(
-            map(lambda a: str(a).replace("\'", "\""),
-                self.current_world)))
+        world_new = np.array(list(map(lambda a: json.dumps(a), world)))
+        world_old = np.array(list(map(lambda a: json.dumps(a), self.current_world)))
+
         set_blocks1 = np.setdiff1d(world_new, world_old)
         removed_blocks1 = np.setdiff1d(world_old, world_new)
         if set_blocks1.size:

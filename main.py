@@ -134,7 +134,10 @@ class MyApp(ShowBase):
             self.player = Player(self.player_name, self.world, server_manager)
 
             self.setupCamera()
-            thread.start_new_thread(self.thread_update, "")
+            thread.start_new_thread(self.update_world, "")
+            thread.start_new_thread(self.update_player, "")
+            thread.start_new_thread(self.update_entities, "")
+            #thread.start_new_thread(self.update_player, "")
             self.taskMgr.add(self.update)
             self.lockMouse()
             self.title.hide()
@@ -177,12 +180,19 @@ class MyApp(ShowBase):
                 self.player_name = self.player_name[:-1]
             self.player_name_text.text = self.player_name
 
-    def thread_update(self):
+    def update_world(self):
         while True:
             self.world.update_world()
-            self.player.update_pos()
             if not self.player.can_fall:
                 self.player.can_fall = True
+    def update_entities(self):
+        while True:
+            self.world.update_entities()
+
+
+    def update_player(self):
+        while True:
+            self.player.update_pos()
 
     def setupCamera(self):
         self.disable_mouse()
@@ -198,7 +208,7 @@ class MyApp(ShowBase):
 
     def update(self, task):
         dt = globalClock.getDt()
-        #self.camera.setPos(self.player.player.getX(), self.player.player.getY(), self.player.player.getZ() + 0.5)
+        # self.camera.setPos(self.player.player.getX(), self.player.player.getY(), self.player.player.getZ() + 0.5)
         self.player.update_player(dt)
 
         self.moveCameraWithMouse(dt)

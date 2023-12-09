@@ -2,7 +2,6 @@ import random
 
 from requests import get, post
 
-from test_map import mas
 from requests.exceptions import ConnectionError
 
 
@@ -18,7 +17,21 @@ class ServerManager:
             # "player_name": player_name
         }
         try:
-            return get(f"{self.config['host']}/get_world", params=params).json()["world"]
+            data = get(f"{self.config['host']}/get_world", params=params).json()
+            if data["status"] == "ok":
+                return data["data"]
+        except ConnectionError:
+            return False
+
+    def get_entities(self):
+        params = {
+            "name": self.server_name,
+            # "player_name": player_name
+        }
+        try:
+            data = get(f"{self.config['host']}/get_entities", params=params).json()
+            if data["status"] == "ok":
+                return data["data"]
         except ConnectionError:
             return False
 

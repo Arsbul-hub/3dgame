@@ -137,12 +137,20 @@ class Player(DirectObject):
                     self.camera_animation.animate(10, dt)
                     sound_manager.play_walk()
                 self.move_player(dt, "forward")
-
             if self.keys.get("backward"):
+                if self.grounded:
+                    self.camera_animation.animate(10, dt)
+                    sound_manager.play_walk()
                 self.move_player(dt, "backward")
             if self.keys.get("right"):
+                if self.grounded:
+                    self.camera_animation.animate(10, dt)
+                    sound_manager.play_walk()
                 self.move_player(dt, "right")
             if self.keys.get("left"):
+                if self.grounded:
+                    self.camera_animation.animate(10, dt)
+                    sound_manager.play_walk()
                 self.move_player(dt, "left")
             if self.keys.get("jump"):
                 self.jump()
@@ -276,13 +284,15 @@ class Player(DirectObject):
                     # pickedObj.remove_node()
 
                     if get_distance(pickedObj.getPos(), camera.getPos()) <= 5 and current_item["type"] == "tool":
+                        block = self.world.remove_block(pickedObj.getPos())
+
                         #block = self.world.removeBlock(pickedObj.getPos())
                         thread.start_new_thread(lambda: self.server_manager.pop_block(self.name, pickedObj.getPos()),
                                                 "")
                         sound_manager.play_broke()
                         # self.server_manager.pop_block(pickedObj.getPos())
 
-                        #self.world.player_removed_blocks.append(block)
+                        self.world.player_removed_blocks.append(block)
                     # self.world.update_world()
                     # self.world.removeBlock(pickedObj.getPos())
             # if self.pq.getNumEntries() > 0:
@@ -315,13 +325,15 @@ class Player(DirectObject):
                     current_item = self.inventory[self.current_inventory_item]
                     if get_distance(position, camera.getPos()) <= 5:
                         if current_item["type"] == "block" and current_item["count"] > 0:
-                        #block = self.world.addBlock(position, block_name=current_item["name"])
+                            x, y, z = position
+                            block = self.world.addBlock((float(x), float(y), float(z)), block_name=current_item["name"])
+
                         # self.world.player_added_blocks.append(block)
-                        #self.world.player_added_blocks.append(block)
+                            self.world.player_added_blocks.append(block)
                             thread.start_new_thread(lambda: self.server_manager.set_block(self.name, self.inventory[
                                 self.current_inventory_item]["name"], position), "")
                             sound_manager.play_broke()
-                        # self.server_manager.set_block(position)
+                        #self.server_manager.set_block(position)
 
                         # self.world.update_world()
 
