@@ -60,6 +60,7 @@ class Player(DirectObject):
         self.setupGroundRay()
         self.setupPlayer()
         self.can_fall = False
+        self.on_swich = None
         self.camera_animation = Animation(sin)
 
     def disable_move(self):
@@ -91,7 +92,7 @@ class Player(DirectObject):
 
     def loadHitbox(self):
         self.pusher = CollisionHandlerPusher()
-        cs = CollisionBox((0, 0, .5), 0.25, 0.25, 1)  # CollisionCapsule(0, 0, 0, 0, 0, 0.3, 0.25)
+        cs = CollisionBox((0, 0, .5), 0.25, 0.25, .75)  # CollisionCapsule(0, 0, 0, 0, 0, 0.3, 0.25)
         # cs.setCenter(0.7,0.7,0.7)
         self.player = render.attachNewNode(CollisionNode('player_hitbox'))
         self.player.node().addSolid(cs)
@@ -122,6 +123,9 @@ class Player(DirectObject):
         if self.inventory:
             if len(self.inventory) > self.current_inventory_item + step >= 0:
                 self.current_inventory_item += step
+        if self.on_swich is not None:
+            self.on_swich()
+
         # if self.current_inventory_item + step == len(self.inventory):
         #     self.current_inventory_item = 0
         # elif self.current_inventory_item + step < 0:
@@ -132,25 +136,20 @@ class Player(DirectObject):
         # print(self.player.getPos())
         if self.can_move:
             self.move_camera()
-            if self.keys.get("forward"):
+            if self.keys.get("forward") or self.keys.get("backward") or self.keys.get("right") or self.keys.get("left"):
                 if self.grounded:
                     self.camera_animation.animate(10, dt)
                     sound_manager.play_walk()
+            if self.keys.get("forward"):
                 self.move_player(dt, "forward")
             if self.keys.get("backward"):
-                if self.grounded:
-                    self.camera_animation.animate(10, dt)
-                    sound_manager.play_walk()
+
                 self.move_player(dt, "backward")
             if self.keys.get("right"):
-                if self.grounded:
-                    self.camera_animation.animate(10, dt)
-                    sound_manager.play_walk()
+
                 self.move_player(dt, "right")
             if self.keys.get("left"):
-                if self.grounded:
-                    self.camera_animation.animate(10, dt)
-                    sound_manager.play_walk()
+
                 self.move_player(dt, "left")
             if self.keys.get("jump"):
                 self.jump()

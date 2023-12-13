@@ -43,7 +43,9 @@ class World(DirectObject):
     def __init__(self, player_name):
         super().__init__()
         self.player_name = player_name
-
+        self.rbc = RigidBodyCombiner("rbc")
+        self.rbcnp = NodePath(self.rbc)
+        self.rbcnp.reparentTo(render)
     def addBlock(self, position, block_name, broke_index=None):
         block_data = blocks[block_name]
         x, y, z = position
@@ -71,10 +73,11 @@ class World(DirectObject):
             cnodePath = block.attachNewNode(CollisionNode(block_name))
 
             cnodePath.node().addSolid(collision)
-            # cnodePath.show()
+            #cnodePath.show()
 
             self.blocks_nodes.append(block)
 
+            #block.flattenStrong()
         block = loader.loadModel("models/box", callback=on_loads, blocking=False)
 
         # print(self.nodes[position])
@@ -211,34 +214,34 @@ class World(DirectObject):
         to_set, to_remove = self.get_worlds_difference(world)
 
 
+        if to_set or to_remove:
+            for block in to_remove:
 
-        for block in to_remove:
+                if block not in self.player_added_blocks:
+                    x, y, z = block["pos"]
 
-            if block not in self.player_added_blocks:
-                x, y, z = block["pos"]
+                    self.remove_block(Vec3(x, y, z))
 
-                self.remove_block(Vec3(x, y, z))
+                # else:
 
-            # else:
+            self.player_added_blocks.clear()
+            for block in to_set:
 
-        #self.player_added_blocks.clear()
-        for block in to_set:
+                if block not in self.player_removed_blocks:
+                    x, y, z = block["pos"]
+                    # print(block["broke"])
 
-            if block not in self.player_removed_blocks:
-                x, y, z = block["pos"]
-                # print(block["broke"])
-
-                d = self.addBlock(position=(x, y, z),
-                              block_name=block["name"],
-                              broke_index=block["broke"])
+                    d = self.addBlock(position=(x, y, z),
+                                  block_name=block["name"],
+                                  broke_index=block["broke"])
 
 
 
-                # self.current_world = world["world"]
-            # else:
-            #     self.player_removed_blocks.remove(block)
-        #self.player_removed_blocks.clear()
-
+                    # self.current_world = world["world"]
+                # else:
+                #     self.player_removed_blocks.remove(block)
+            self.player_removed_blocks.clear()
+            #self.rbc.collect()
 
         #self.current_world = world
 

@@ -20,7 +20,7 @@ class ServerManager:
             data = get(f"{self.config['host']}/get_world", params=params).json()
             if data["status"] == "ok":
                 return data["data"]
-        except ConnectionError:
+        except:
             return False
 
     def get_entities(self):
@@ -32,7 +32,7 @@ class ServerManager:
             data = get(f"{self.config['host']}/get_entities", params=params).json()
             if data["status"] == "ok":
                 return data["data"]
-        except ConnectionError:
+        except:
             return False
 
     def connect_user(self, player_name):
@@ -45,7 +45,7 @@ class ServerManager:
             if out["status"] == "ok":
                 return True
             return False
-        except ConnectionError:
+        except:
             return False
 
     def update_user(self, player_name, pos, hpr):
@@ -76,7 +76,7 @@ class ServerManager:
             out = get(f"{self.config['host']}/respawn_user", params=params).json()
             if out["status"] == "ok":
                 return out["x"], out["y"], out["z"]
-        except ConnectionError:
+        except:
             return False
 
     def hit_player(self, player_name):
@@ -86,7 +86,7 @@ class ServerManager:
         }
         try:
             post(f"{self.config['host']}/hit_user", params=params)
-        except ConnectionError:
+        except:
             return False
 
     def disconnect_user(self, player_name):
@@ -99,7 +99,7 @@ class ServerManager:
             if out["status"] == "ok":
                 return True
             return False
-        except ConnectionError:
+        except:
             return False
 
     def set_block(self, player_name, item_name, pos):
@@ -113,7 +113,7 @@ class ServerManager:
         }
         try:
             post(f"{self.config['host']}/set_block", params=params)
-        except ConnectionError:
+        except:
             return False
 
     def pop_block(self, player_name, pos):
@@ -126,7 +126,7 @@ class ServerManager:
         }
         try:
             post(f"{self.config['host']}/remove_block", params=params)
-        except ConnectionError:
+        except:
             return False
 
     def create_server(self):
@@ -142,5 +142,5 @@ class ServerManager:
         # for i in range(60):
         try:
             return get(f"{self.config['host']}/create_server", params=params).json()
-        except ConnectionError:
+        except:
             return
